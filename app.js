@@ -11,7 +11,8 @@ app.use(express.json());
 app.use("/api", router);
 mongoose
   .connect(
-    `mongodb+srv://admin:${process.env.MONGODB_PASSWORORD}@cluster0.hes3x.mongodb.net/auth?retryWrites=true&w=majority`
+    `mongodb+srv://testadmin:admin234@cluster1.upa61h6.mongodb.net/?retryWrites=true&w=majority
+    `
   )
   .then(() => {
     app.listen(5000);

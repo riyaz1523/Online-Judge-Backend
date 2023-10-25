@@ -1,33 +1,45 @@
 const User = require("../model/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const signup = async (req, res, next) => {
-  const { name, email, password } = req.body;
-  let existingUser;
-  try {
-    existingUser = await User.findOne({ email: email });
-  } catch (err) {
-    console.log(err);
-  }
-  if (existingUser) {
-    return res
-      .status(400)
-      .json({ message: "User already exists! Login Instead" });
-  }
-  const hashedPassword = bcrypt.hashSync(password);
-  const user = new User({
-    name,
-    email,
-    password: hashedPassword,
-  });
 
+const signup = async (req, res, next) => {
   try {
-    await user.save();
-  } catch (err) {
-    console.log(err);
+    const { name, email, password } = req.body;
+    console.log(name, email, password);
+    let existingUser;
+    try {
+      existingUser = await User.findOne({ email: email });
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json({ message: "Server error" });
+    }
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ message: "User already exists! Login Instead" });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password not provided" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    const token = jwt.sign({ id: user._id, email }, process.env.SECRET_KEY, {
+      expiresIn: "1d",
+    });
+    user.token = token;
+    user.password = undefined;
+    res.status(200).json({ message: "you have registered successfully!", user });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Server error" });
   }
-  return res.status(201).json({ message: user });
 };
+
 
 const login = async (req, res, next) => {
   const { email, password } = req.body;
@@ -46,7 +58,7 @@ const login = async (req, res, next) => {
     return res.status(400).json({ message: "Inavlid Email / Password" });
   }
   const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET_KEY, {
-    expiresIn: "35s",
+    expiresIn: "1hr",
   });
 
   console.log("Generated Token\n", token);
@@ -69,6 +81,9 @@ const login = async (req, res, next) => {
 
 const verifyToken = (req, res, next) => {
   const cookies = req.headers.cookie;
+  if(!cookies) {
+    return res.status(404).json({ message: "No cookies found" });
+  }
   const token = cookies.split("=")[1];
   if (!token) {
     res.status(404).json({ message: "No token found" });
