@@ -100,17 +100,23 @@ const verifyToken = (req, res, next) => {
 };
 
 const getUser = async (req, res, next) => {
-  const userId = req.id;
-  let user;
   try {
-    user = await User.findById(userId, "-password");
-  } catch (err) {
-    return new Error(err);
+    const userId = req.id;
+    let user;
+    try {
+      user = await User.findById(userId, "-password");
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Server error" });
+    }
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
   }
-  if (!user) {
-    return res.status(404).json({ messsage: "User Not FOund" });
-  }
-  return res.status(200).json({ user });
 };
 const refreshToken = (req, res, next) => {
   const cookies = req.headers.cookie;
